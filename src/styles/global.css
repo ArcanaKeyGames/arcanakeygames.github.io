@@ -1,0 +1,242 @@
+/* ============================================================
+   Arcana Key Games — global styles
+   Palette derived from the game's own HUDConstants:
+     porcelain  = COLOR_PANEL_BG (0.98, 0.96, 0.94)
+     gold       = COLOR_GOLD     (0.83, 0.69, 0.22)
+     mud        = TITLE_MUD_COLOR(0.58, 0.51, 0.40)  — the title
+                  screen's decay pigment, reused as muted text.
+   Type: Merriweather (display + prose) / Merriweather Sans (UI).
+   ============================================================ */
+
+/* Two themes, one world: porcelain daylight and the same gold at night.
+   Dark mode is a deep warm ink, never a cold gray — the palette stays in
+   the game's own family.
+
+   --gold-accent is the "gold that must contrast with the page": dark gold
+   on porcelain, light gold on ink. Use it for links and ghost buttons.
+   --gold itself (the rail/border gold) is identical in both themes. */
+
+:root {
+  color-scheme: light;
+
+  --porcelain: #faf6f0;
+  --porcelain-deep: #f1eadf;
+  --nav-bg: #fdfbf7;
+  --ink: #171512;
+  --ink-soft: #3a352d;
+  --mud: #7a6a50;
+  --mud-pigment: #948267;
+  --gold: #d4b038;
+  --gold-light: #e8cf6e;
+  --gold-dark: #8a6d1f;
+  --gold-accent: #8a6d1f;
+  --band-ink: #211b0e;
+  --band-text: #e8cf6e;
+  --band-field-bg: #faf6f0;
+  --band-field-ink: #171512;
+  --band-edge: transparent;
+
+  --serif: "Merriweather", Georgia, serif;
+  --sans: "Merriweather Sans", "Segoe UI", system-ui, sans-serif;
+
+  --measure: 62ch;
+  --page-max: 1120px;
+  --pad-x: clamp(1.25rem, 4vw, 2.5rem);
+  /* Vertical breathing room at every section edge. A fixed pixel value on
+     purpose: the gold rules sit between sections, so this is exactly the
+     distance from a rule to the content on either side of it, the same
+     at every rule and every viewport. */
+  --section-gap: 40px;
+}
+
+/* Explicit choice via the toggle. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --porcelain: #14110b;
+  --porcelain-deep: #1e1a12;
+  --nav-bg: #191509;
+  --ink: #f3ede2;
+  --ink-soft: #cdc4b3;
+  --mud: #9d8d72;
+  --mud-pigment: #a8977a;
+  --gold: #d4b038;
+  --gold-light: #ecd685;
+  --gold-dark: #a5842a;
+  --gold-accent: #e0c563;
+  /* The signup band inverts its relationship to the page: in daylight it
+     is the one dark element; at night it lifts slightly and is fenced by
+     gold hairlines so it still reads as a distinct moment. */
+  --band-ink: #221c10;
+  --band-text: #ecd685;
+  --band-field-bg: #100d08;
+  --band-field-ink: #f3ede2;
+  --band-edge: color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+/* No explicit choice yet — follow the operating system. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+
+    --porcelain: #14110b;
+    --porcelain-deep: #1e1a12;
+    --nav-bg: #191509;
+    --ink: #f3ede2;
+    --ink-soft: #cdc4b3;
+    --mud: #9d8d72;
+    --mud-pigment: #a8977a;
+    --gold: #d4b038;
+    --gold-light: #ecd685;
+    --gold-dark: #a5842a;
+    --gold-accent: #e0c563;
+    --band-ink: #221c10;
+    --band-text: #ecd685;
+    --band-field-bg: #100d08;
+    --band-field-ink: #f3ede2;
+    --band-edge: color-mix(in srgb, var(--gold) 45%, transparent);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Clears the sticky header when jumping to an anchor. The bar is 68px
+     at its tallest (63px once the nav CTA drops on phones), so this
+     lands the target just below it with room to breathe. A fixed value
+     rather than a measured one: 5px of variance is not worth a script. */
+  scroll-padding-top: 5.5rem;
+}
+
+body {
+  margin: 0;
+  background: var(--porcelain);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+img,
+video {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: var(--gold-accent);
+  text-decoration-color: color-mix(in srgb, var(--gold) 60%, transparent);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--ink);
+  text-decoration-color: var(--gold);
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ---- Layout helpers ---------------------------------------- */
+
+.wrap {
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--pad-x);
+}
+
+/* ---- Gold rule with corner braces (HUDOrnaments echo) ------- */
+/* A thin double rail used as a section divider.                  */
+
+.gold-rule {
+  border: 0;
+  height: 5px;
+  max-width: 220px;
+  margin: 0 auto;
+  border-top: 1px solid var(--gold);
+  border-bottom: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+/* ---- Buttons ------------------------------------------------ */
+
+.btn {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.7rem 1.5rem;
+  border-radius: 4px;
+  text-decoration: none;
+  border: 1.5px solid var(--gold);
+  transition: background-color 140ms ease, color 140ms ease,
+    border-color 140ms ease;
+}
+
+.btn-primary {
+  background: var(--gold);
+  color: var(--band-ink);
+}
+
+.btn-primary:hover {
+  background: var(--gold-light);
+  border-color: var(--gold-light);
+  color: var(--band-ink);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--gold-accent);
+}
+
+.btn-ghost:hover {
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  color: var(--ink);
+}
+
+/* ---- Utility ------------------------------------------------ */
+
+.sans {
+  font-family: var(--sans);
+}
+
+.muted {
+  color: var(--mud);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- Motion: one entrance, honoring reduced-motion ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .fade-up {
+    animation: fade-up 800ms ease-out both;
+  }
+  .fade-up-late {
+    animation: fade-up 800ms ease-out 180ms both;
+  }
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

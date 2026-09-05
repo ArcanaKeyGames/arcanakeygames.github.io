@@ -1,0 +1,211 @@
+---
+// MediaSlot — every image/video frame on the site is this component.
+// Fixed aspect ratio (no layout shift when media lands later); when
+// `media` is null it renders the gold placeholder frame with a label,
+// so an unfilled slot looks intentional rather than broken.
+//
+// Fill a slot by editing src/config/site.ts — never this file.
+import fs from "node:fs";
+import path from "node:path";
+import sharp from "sharp";
+
+import type { Media } from "../config/site";
+
+interface Props {
+  media: Media;
+  ratio?: string; // CSS aspect-ratio, e.g. "16 / 9"
+  placeholderLabel?: string;
+  eager?: boolean; // true for above-the-fold media (the hero)
+  fit?: "cover" | "contain"; // "contain" never crops — use it when a set
+  // of images share a frame but not an aspect ratio
+  frameHeight?: string; // fixed CSS height instead of an aspect ratio, so
+  // a gallery of mixed portrait/landscape art holds one size
+}
+
+const {
+  media,
+  ratio = "16 / 9",
+  placeholderLabel = "Coming soon",
+  eager = false,
+  fit = "cover",
+  frameHeight,
+} = Astro.props;
+
+// A fixed height wins over the ratio: mixed-orientation art in one frame
+// needs a constant height, not a constant shape. The frame then hugs the
+// art's own width so a portrait piece isn't marooned in a wide empty box
+// — heights match across the set, so nothing shifts when they swap.
+// Passed as a custom property, not a finished rule, so the stylesheet can
+// flip the binding constraint on narrow screens (see .hug below).
+const frameStyle = frameHeight
+  ? `--frame-h: ${frameHeight};`
+  : `aspect-ratio: ${ratio};`;
+
+const mediaStyle = `object-fit: ${fit};`;
+
+// Intrinsic size, read from the file at build time. Without width/height
+// the browser has nothing to reserve space with, and a hug-mode frame
+// (width: fit-content over an auto-width image) collapses to nothing
+// until the image decodes. Nobody has to hand-maintain dimensions in
+// site.ts for this — the file already knows them.
+let dimensions: { width: number; height: number } | null = null;
+if (media?.type === "image") {
+  try {
+    const file = path.join(process.cwd(), "public", media.src);
+    if (fs.existsSync(file)) {
+      const meta = await sharp(file).metadata();
+      if (meta.width && meta.height) {
+        dimensions = { width: meta.width, height: meta.height };
+      }
+    }
+  } catch {
+    dimensions = null; // never let a missing file break the build
+  }
+}
+
+// The byline rides on the media object itself, so it arrives and leaves
+// with the artwork — an empty slot can never show a stale credit.
+const credit = media?.credit ?? null;
+---
+
+<figure class="media-figure">
+  <div class:list={["media-slot", { hug: !!frameHeight }]} style={frameStyle}>
+    {
+      media === null ? (
+        <div class="placeholder" role="img" aria-label={placeholderLabel}>
+          <svg
+            class="ph-key"
+            viewBox="0 0 48 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            aria-hidden="true"
+          >
+            <circle cx="10" cy="12" r="6" />
+            <path d="M16 12h26M36 12v6M42 12v4" stroke-linecap="round" />
+          </svg>
+          <span class="ph-label">{placeholderLabel}</span>
+        </div>
+      ) : media.type === "image" ? (
+        <img
+          src={media.src}
+          alt={media.alt}
+          loading={eager ? "eager" : "lazy"}
+          decoding="async"
+          width={dimensions?.width}
+          height={dimensions?.height}
+          style={mediaStyle}
+        />
+      ) : (
+        <video
+          src={media.src}
+          poster={media.poster}
+          autoplay
+          loop
+          muted
+          playsinline
+          style={mediaStyle}
+        />
+      )
+    }
+  </div>
+
+  {credit && <figcaption class="media-credit sans">Art by {credit}</figcaption>}
+</figure>
+
+<style>
+  /* The figure wraps frame + caption; the frame keeps the aspect ratio
+     and the overflow clip, so a caption can sit under it without being
+     cropped or stealing height from the art. */
+  .media-figure {
+    margin: 0;
+  }
+
+  .media-slot {
+    margin: 0;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 6px;
+    border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+    background: var(--porcelain-deep);
+  }
+
+  .media-slot img,
+  .media-slot video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Hug mode: height is the shared constant and the frame shrinks to the
+     art's own width, so a set of mixed portrait/landscape pieces lines up
+     without any of them marooned in a wide empty box. */
+  .media-slot.hug {
+    height: var(--frame-h);
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
+  .media-slot.hug img,
+  .media-slot.hug video {
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+  }
+
+  /* Narrow screens invert the constraint: width is what's scarce, so the
+     art fills it and height follows. Holding the desktop height here would
+     letterbox a landscape piece into a tall, mostly empty frame. */
+  @media (max-width: 720px) {
+    .media-slot.hug {
+      height: auto;
+      width: 100%;
+    }
+
+    .media-slot.hug img,
+    .media-slot.hug video {
+      height: auto;
+      width: 100%;
+    }
+  }
+
+  .placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    color: var(--mud);
+    border: 1px dashed color-mix(in srgb, var(--gold) 70%, transparent);
+    border-radius: 5px;
+    margin: 6px;
+    width: calc(100% - 12px);
+    height: calc(100% - 12px);
+  }
+
+  .ph-key {
+    width: 44px;
+    height: 22px;
+    color: var(--gold-accent);
+    opacity: 0.75;
+  }
+
+  .ph-label {
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .media-credit {
+    margin-top: 0.5rem;
+    text-align: center;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--mud);
+  }
+</style>

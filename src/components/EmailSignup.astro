@@ -1,0 +1,163 @@
+---
+// EmailSignup — the one dark element on the page, at the decision point.
+// Provider-agnostic: paste a Buttondown/MailerLite form action URL into
+// site.ts and it goes live; until then the field renders disabled with
+// an honest note.
+import { site } from "../config/site";
+
+const live = site.emailFormAction !== null;
+---
+
+<section class="signup" id="signup" aria-labelledby="signup-heading">
+  <div class="wrap signup-inner">
+    <h2 id="signup-heading">{site.emailHeading}</h2>
+
+    {
+      live ? (
+        <form
+          class="signup-form"
+          action={site.emailFormAction}
+          method="post"
+          target="_blank"
+        >
+          <label class="sr-only" for="signup-email">
+            Email address
+          </label>
+          <input
+            id="signup-email"
+            type="email"
+            name="email"
+            required
+            placeholder="your@email.com"
+            autocomplete="email"
+          />
+          <button class="btn btn-primary" type="submit">
+            Sign Up
+          </button>
+        </form>
+      ) : (
+        <div class="signup-form" aria-hidden="true">
+          <input type="email" placeholder="your@email.com" disabled />
+          <button class="btn btn-primary" type="button" disabled>
+            Sign Up
+          </button>
+        </div>
+      )
+    }
+
+    <p class="signup-note sans">
+      {live ? site.emailSubtext : "Mailing list opens soon — for now, YouTube is the place to follow along."}
+    </p>
+
+    {
+      site.links.youtube && (
+        <p class="signup-social">
+          <a class="btn-youtube" href={site.links.youtube} rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+            </svg>
+            Watch on YouTube
+          </a>
+        </p>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .signup {
+    background: var(--band-ink);
+    border-top: 1px solid var(--band-edge);
+    border-bottom: 1px solid var(--band-edge);
+    padding: 3.5rem 0 3.75rem;
+    text-align: center;
+  }
+
+  .signup-inner {
+    max-width: 640px;
+  }
+
+  .signup h2 {
+    color: var(--band-text);
+    font-size: clamp(1.25rem, 2.6vw, 1.6rem);
+    font-weight: 700;
+    margin: 0 0 1.5rem;
+  }
+
+  .signup-form {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .signup-form input {
+    font-family: var(--sans);
+    font-size: 0.9375rem;
+    padding: 0.7rem 1rem;
+    min-width: min(280px, 70vw);
+    border: 1.5px solid color-mix(in srgb, var(--gold) 55%, transparent);
+    border-radius: 4px;
+    background: var(--band-field-bg);
+    color: var(--band-field-ink);
+    color: var(--ink);
+  }
+
+  .signup-form input:disabled,
+  .signup-form .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .signup-form input:focus-visible {
+    outline-color: var(--gold-light);
+  }
+
+  .signup-note {
+    color: color-mix(in srgb, var(--band-text) 55%, var(--mud));
+    font-size: 0.8125rem;
+    margin: 1rem 0 0;
+  }
+
+  /* ---- YouTube ------------------------------------------------
+     The band is dark in both themes, but --gold-accent is *dark*
+     gold in daylight and would sink into --band-ink. So this button
+     reads off --band-text (light gold in both themes) instead of
+     reusing .btn-ghost. The glyph inherits currentColor, so it
+     inverts along with the text when the fill comes in on hover. */
+
+  .signup-social {
+    margin: 1.75rem 0 0;
+  }
+
+  .btn-youtube {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--sans);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.6rem 1.35rem;
+    border-radius: 4px;
+    text-decoration: none;
+    background: transparent;
+    color: var(--band-text);
+    border: 1.5px solid color-mix(in srgb, var(--band-text) 55%, transparent);
+    transition: background-color 140ms ease, color 140ms ease,
+      border-color 140ms ease;
+  }
+
+  .btn-youtube:hover {
+    background: var(--band-text);
+    border-color: var(--band-text);
+    color: var(--band-ink);
+  }
+
+  .btn-youtube svg {
+    width: 1.3rem;
+    height: 1.3rem;
+    flex: none;
+    fill: currentColor;
+  }
+</style>

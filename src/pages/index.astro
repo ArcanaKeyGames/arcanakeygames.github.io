@@ -1,0 +1,336 @@
+---
+// Landing page. All content comes from src/config/site.ts — edit that
+// file, not this one, to change words/links/media.
+import Base from "../layouts/Base.astro";
+import MediaSlot from "../components/MediaSlot.astro";
+import EmailSignup from "../components/EmailSignup.astro";
+import CharacterTabs from "../components/CharacterTabs.astro";
+import { site } from "../config/site";
+
+// The hero carries no buttons until steamUrl exists: Get Updates, Watch
+// Videos and Support Us live in the top bar and the signup band, so
+// repeating them here was noise. The wishlist button is the exception —
+// the day the Steam page is live, it is the one thing the hero should
+// ask for.
+const hasSteam = site.steamUrl !== null;
+
+// ---- Videos: latest upload fetched from the channel RSS at build
+// time. Any failure (no network, bad id) just hides the section — the
+// site never breaks because YouTube hiccuped during a deploy.
+let latestVideoId: string | null = null;
+if (site.youtubeChannelId) {
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/feeds/videos.xml?channel_id=${site.youtubeChannelId}`,
+    );
+    if (res.ok) {
+      const xml = await res.text();
+      latestVideoId = xml.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1] ?? null;
+    }
+  } catch {
+    latestVideoId = null;
+  }
+}
+---
+
+<Base>
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-art fade-up">
+        <MediaSlot
+          media={site.hero.media}
+          ratio="8 / 7"
+          placeholderLabel="Key art pending"
+          eager
+        />
+      </div>
+
+      <div class="hero-text fade-up-late">
+        <p class="status sans">{site.statusBadge}</p>
+        <h1 class="game-title">{site.gameName}</h1>
+        <p class="pitch">{site.pitch}</p>
+
+        <blockquote class="greeting">
+          <p>&ldquo;{site.hero.greeting}&rdquo;</p>
+          {
+            site.hero.greetingAttribution && (
+              <cite class="sans">{site.hero.greetingAttribution}</cite>
+            )
+          }
+        </blockquote>
+
+        {
+          hasSteam && (
+            <div class="cta-row">
+              <a class="btn btn-primary" href={site.steamUrl!} rel="noopener">
+                Wishlist on Steam
+              </a>
+            </div>
+          )
+        }
+      </div>
+    </div>
+  </section>
+
+  <hr class="gold-rule" />
+
+  <!-- ================= PILLARS ================= -->
+  <section class="pillars" aria-label="About the game">
+    <div class="wrap">
+      {
+        site.pillars.map((pillar, i) => (
+          <div class:list={["pillar", { flip: i % 2 === 1 }]}>
+            <div class="pillar-media">
+              <MediaSlot
+                media={pillar.media}
+                placeholderLabel={pillar.placeholderLabel}
+              />
+            </div>
+            <div class="pillar-text">
+              <p class="eyebrow sans">{pillar.eyebrow}</p>
+              <h2>{pillar.heading}</h2>
+              <p>{pillar.body}</p>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <hr class="gold-rule" />
+
+  <!-- ================= PARTY ================= -->
+  <CharacterTabs />
+
+  <!-- ================= VIDEOS ================= -->
+  {
+    latestVideoId && (
+      <>
+        <hr class="gold-rule" />
+        <section class="videos" aria-labelledby="videos-heading">
+          <div class="wrap videos-inner">
+            <h2 id="videos-heading">Latest Video</h2>
+            <div class="video-frame">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${latestVideoId}`}
+                title="Latest video"
+                loading="lazy"
+                allow="accelerometer; encrypted-media; picture-in-picture"
+                allowfullscreen
+              />
+            </div>
+            {site.youtubeChannelUrl && (
+              <p class="sans videos-more">
+                <a href={site.youtubeChannelUrl} rel="noopener">
+                  All Videos &rarr;
+                </a>
+              </p>
+            )}
+          </div>
+        </section>
+      </>
+    )
+  }
+
+  <!-- ================= EMAIL ================= -->
+  <EmailSignup />
+</Base>
+
+<style>
+  /* ---- Hero ------------------------------------------------- */
+
+  .hero {
+    padding-block: var(--section-gap);
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    gap: clamp(1.5rem, 4vw, 3.5rem);
+    align-items: center;
+  }
+
+  /* Every text block on the page is centred within its own column; the
+     badge and the title are inline-blocks, so text-align handles them. */
+  .hero-text {
+    text-align: center;
+  }
+
+  .status {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold-accent);
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    padding: 0.22rem 0.8rem;
+    margin: 0 0 1rem;
+  }
+
+  /* The wordmark: ink fading to mud across the word — a daylight echo
+     of the title screen's white-to-mud-to-black letter decay. */
+  .game-title {
+    font-size: clamp(2.4rem, 6vw, 3.6rem);
+    font-weight: 900;
+    line-height: 1.08;
+    letter-spacing: 0.01em;
+    /* 16px + the pitch's half-leading and ascender space = 24px from the
+       gold rule to the pitch's caps, the same gap the pitch keeps to the
+       greeting and the pillars keep between heading and description. */
+    margin: 0 0 16px;
+    color: var(--ink);
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 0.55rem;
+    display: inline-block;
+  }
+
+  .pitch {
+    font-size: clamp(1.05rem, 2vw, 1.2rem);
+    font-style: italic;
+    color: var(--ink-soft);
+    /* 8px + descent/leading on both sides = 24px baseline-to-caps. */
+    margin: 0 0 8px;
+  }
+
+  /* No trailing margins: the greeting is the last thing in the column,
+     and a bottom margin here would sit inside the grid item, pushing the
+     whole text block off-centre against the art. */
+  .greeting {
+    margin: 0;
+  }
+
+  .greeting p {
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.75;
+  }
+
+  .greeting cite {
+    display: block;
+    margin-top: 0.5rem;
+    font-style: normal;
+    font-size: 0.8125rem;
+    color: var(--mud);
+  }
+
+  .cta-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 820px) {
+    .hero-grid {
+      grid-template-columns: 1fr;
+    }
+    .cta-row {
+      justify-content: center;
+    }
+  }
+
+  /* ---- Pillars ---------------------------------------------- */
+
+  .pillars {
+    padding-block: var(--section-gap);
+  }
+
+  .pillar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(1.5rem, 4vw, 3rem);
+    align-items: center;
+  }
+
+  .pillar + .pillar {
+    margin-top: clamp(2.25rem, 5vw, 3.5rem);
+  }
+
+  .pillar.flip .pillar-media {
+    order: 2;
+  }
+
+  .pillar-text {
+    text-align: center;
+  }
+
+  /* Scoped under .pillar-text so this outranks the generic
+     ".pillar-text p" rule below, which resets margins. */
+  .pillar-text .eyebrow {
+    display: block;
+    width: fit-content;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold-accent);
+    /* The label and its underline read as one unit, so the rule hugs
+       the caps (~8px, from padding plus the font's descent). The gap
+       from the rule down to the heading's caps then matches the gap from
+       the heading to the description (~24px, measured with the real
+       fonts): the heading's ascender space gives 5px, the margin the
+       rest. (This must be a block — as an inline-block the margin never
+       reached the heading, the parent line box's strut set the gap.) */
+    line-height: 1;
+    margin: 0 auto 19px;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  }
+
+  .pillar-text h2 {
+    font-size: clamp(1.25rem, 2.6vw, 1.55rem);
+    font-weight: 700;
+    margin: 0 0 0.6rem;
+    line-height: 1.25;
+  }
+
+  .pillar-text p {
+    margin: 0 auto;
+    max-width: var(--measure);
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 720px) {
+    .pillar,
+    .pillar.flip {
+      grid-template-columns: 1fr;
+    }
+    .pillar.flip .pillar-media {
+      order: 0;
+    }
+  }
+
+  /* ---- Videos ----------------------------------------------- */
+
+  .videos {
+    padding-block: var(--section-gap);
+    text-align: center;
+  }
+
+  .videos h2 {
+    font-size: clamp(1.25rem, 2.6vw, 1.55rem);
+    margin: 0 0 1.5rem;
+  }
+
+  .video-frame {
+    max-width: 760px;
+    margin-inline: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  }
+
+  .video-frame iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  .videos-more {
+    margin: 1rem 0 0;
+    font-size: 0.9rem;
+  }
+</style>

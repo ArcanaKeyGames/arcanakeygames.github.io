@@ -1,0 +1,226 @@
+---
+// CharacterTabs — the flip-tab gallery of Seer/Fae pairings from Kon's
+// party. Tab buttons are the pair names straight from site.ts; add or
+// remove an entry there and the tabs follow. Nothing here needs editing
+// to change who appears.
+//
+// The art is mixed portrait and landscape, so the frame is a fixed
+// height with `contain` rather than a fixed ratio with `cover`: every
+// piece shows whole, and flipping tabs never shifts the layout.
+import MediaSlot from "./MediaSlot.astro";
+import { site } from "../config/site";
+
+const party = site.party;
+
+// Lore paragraphs carry two bits of markup: **bold** and *italic*.
+// Escape first, then introduce tags, so the config can never inject
+// markup. Double asterisks are matched before single ones.
+const escapeHtml = (text: string) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const withEmphasis = (text: string) =>
+  escapeHtml(text)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+---
+
+{
+  party.length > 0 && (
+    <section class="party" aria-labelledby="party-heading">
+      <div class="wrap">
+        <h2 id="party-heading">{site.partyHeading}</h2>
+
+        {site.partyIntro && (
+          <p class="party-intro" set:html={withEmphasis(site.partyIntro)} />
+        )}
+
+        <div class="party-tabs" role="tablist" aria-label="Characters" data-party-tabs>
+          {party.map((member, i) => (
+            <button
+              type="button"
+              class="party-tab"
+              role="tab"
+              id={`party-tab-${i}`}
+              aria-controls={`party-panel-${i}`}
+              aria-selected={i === 0 ? "true" : "false"}
+              tabindex={i === 0 ? 0 : -1}
+            >
+              {member.name}
+            </button>
+          ))}
+        </div>
+
+        {site.partySubtext && (
+          <p class="party-subtext sans" set:html={withEmphasis(site.partySubtext)} />
+        )}
+
+        {party.map((member, i) => (
+          <div
+            class="party-panel"
+            role="tabpanel"
+            id={`party-panel-${i}`}
+            aria-labelledby={`party-tab-${i}`}
+            hidden={i !== 0}
+          >
+            <MediaSlot
+              media={member.media}
+              fit="contain"
+              frameHeight="clamp(320px, 58vh, 560px)"
+              placeholderLabel={`${member.name} art pending`}
+            />
+          </div>
+        ))}
+
+        {site.partyOutro && (
+          <p class="party-outro" set:html={withEmphasis(site.partyOutro)} />
+        )}
+      </div>
+    </section>
+  )
+}
+
+<script>
+  // Roving tabindex + arrow keys, per the ARIA tabs pattern. Without JS
+  // the first panel is already visible and the rest stay hidden, so the
+  // section degrades to a single character rather than to nothing.
+  for (const list of document.querySelectorAll<HTMLElement>("[data-party-tabs]")) {
+    const tabs = Array.from(list.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+
+    const select = (index: number) => {
+      tabs.forEach((tab, i) => {
+        const on = i === index;
+        tab.setAttribute("aria-selected", on ? "true" : "false");
+        tab.tabIndex = on ? 0 : -1;
+        const panel = document.getElementById(tab.getAttribute("aria-controls") ?? "");
+        if (panel) panel.hidden = !on;
+      });
+    };
+
+    list.addEventListener("click", (event) => {
+      const tab = (event.target as HTMLElement).closest<HTMLButtonElement>('[role="tab"]');
+      if (tab) select(tabs.indexOf(tab));
+    });
+
+    list.addEventListener("keydown", (event) => {
+      const current = tabs.findIndex((t) => t.getAttribute("aria-selected") === "true");
+      const last = tabs.length - 1;
+      let next: number | null = null;
+
+      if (event.key === "ArrowRight") next = current === last ? 0 : current + 1;
+      else if (event.key === "ArrowLeft") next = current === 0 ? last : current - 1;
+      else if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = last;
+
+      if (next !== null) {
+        event.preventDefault();
+        select(next);
+        tabs[next].focus();
+      }
+    });
+  }
+</script>
+
+<style>
+  .party {
+    /* Trimmed by the text's own leading so the section gap is measured to
+       the glyphs: 5px is the heading's ascender space above its caps, 9px
+       is the outro's descent plus half-leading under its baseline. Both
+       edges then read as exactly --section-gap. */
+    padding-block: calc(var(--section-gap) - 5px) calc(var(--section-gap) - 9px);
+    text-align: center;
+  }
+
+  .party h2 {
+    font-size: clamp(1.25rem, 2.6vw, 1.55rem);
+    line-height: 1.25;
+    /* 10px + descent + the intro's leading = 24px baseline-to-caps. */
+    margin: 0 0 10px;
+  }
+
+  /* Sits between the tabs and the art, so it needs air on both sides. */
+  .party-subtext {
+    margin: 0 0 1.25rem;
+    font-size: 0.875rem;
+    color: var(--mud);
+  }
+
+  .party-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+
+  .party-tab {
+    font-family: var(--sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.5rem 1.1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--gold-accent);
+    border: 1.5px solid color-mix(in srgb, var(--gold) 55%, transparent);
+    transition: background-color 140ms ease, color 140ms ease,
+      border-color 140ms ease;
+  }
+
+  .party-tab:hover {
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+    color: var(--ink);
+  }
+
+  /* The selected tab borrows the primary button's fill, so the active
+     character reads at a glance rather than by a hairline difference. */
+  .party-tab[aria-selected="true"] {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--band-ink);
+  }
+
+  .party-panel[hidden] {
+    display: none;
+  }
+
+  /* The section's closing thought: what a Seer actually is. Sits after
+     the art so a reader who came for the pictures leaves with the lore.
+     Kept to the prose measure — a centered line this long is unreadable
+     running the full width of the page. */
+  .party-intro,
+  .party-outro {
+    max-width: var(--measure);
+    margin-inline: auto;
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--ink-soft);
+  }
+
+  /* The lede under the heading: explains what a See'er is before the
+     reader meets any of them. */
+  .party-intro {
+    margin-block: 0 1.75rem;
+  }
+
+  /* The closer, fenced off from the art credit above it so the last line
+     before the mailing list lands on its own. */
+  .party-outro {
+    /* The rule is a full-width divider, so it gets section-gap air on
+       both sides, measured to the glyphs: 35px + the credit's descent
+       above, 33px + the outro's leading and ascender space below. */
+    margin-block: 35px 0;
+    padding-top: 33px;
+    border-top: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  }
+
+  /* The prose is upright, so *italic* and **bold** both land on faces
+     that are actually loaded (1,400 and 0,700) and need no correcting.
+     Stated rather than inherited: :global() is required because these
+     tags arrive via set:html and never get the scoping attribute a bare
+     selector would match on. */
+  .party-intro :global(strong),
+  .party-outro :global(strong) {
+    font-weight: 700;
+  }
+</style>
